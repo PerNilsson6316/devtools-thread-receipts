@@ -1,6 +1,6 @@
 # Thread signals from a CLI
 
-Infrai keeps things simple with one key for realtime and other calls. Start with the command a maintainer can run:
+Start with the command a maintainer can run:
 
 ```sh
 export INFRAI_API_KEY=...
@@ -9,27 +9,27 @@ npm test
 npm run demo
 ```
 
-This demo covers two thread signals we deal with in messaging products: typing indicators and read receipts. `receiptDecision` makes the state transition explicit, and `publishThreadEvent` sends that decision to Infrai realtime. Infrai uses one key for the realtime calls, and we keep that key on the Node side to avoid leaking it in browsers.
+The demo models two developer-thread signals: a typing indicator and a read receipt. `receiptDecision` makes the state change explicit, then `publishThreadEvent` sends that decision to Infrai realtime. Infrai uses one key for the realtime calls, and this example keeps that key on the Node side.
 
 ## Request shape
 
-`RealtimeClient` is a thin typed wrapper for creating channels, minting client tokens, publishing events, and checking presence. Every call sets an explicit HTTP method and parses the `{ ok, data, error, metadata }` envelope before trusting the HTTP status as transport. A rejected envelope becomes `InfraiError`; we back off exponentially on rate limits and honor `Retry-After`, because a 429 storm is how OTP gaps happen.
+`RealtimeClient` is a small typed boundary around channel creation, client-token issuance, event publishing, and presence lookup. Every call sends an explicit HTTP method and reads the `{ ok, data, error, metadata }` envelope before treating the HTTP status as transport information. A rejected envelope becomes `InfraiError`; rate limiting waits with exponential backoff and honors `Retry-After`.
 
-The write payload is `{ channel, event, data, account_id }`. The `data` value is the decision from your domain logic, so a client can render `typing` or store a read label without guessing transport internals. `INFRAI_API_KEY` is read from the environment; the token endpoint returns a short-lived client token for a direct realtime connection.
+The write payload is `{ channel, event, data, account_id }`. The `data` value is the decision returned by the domain function, so a consumer can render `typing` or persist a read label without guessing at transport details. `INFRAI_API_KEY` is read from the environment; the token endpoint issues a short-lived client token for a direct realtime connection.
 
 ## Verify one decision
 
-A deterministic test checks both inputs and their expected results:
+The deterministic test covers both inputs and their expected results:
 
 ```sh
 npm test
 ```
 
-It prints `typing/read decision checks passed` when the indicator is visible for `typing` and the receipt label contains its reader and message id. Good for catching presence desync edge cases.
+It prints `typing/read decision checks passed` when the indicator is visible for `typing` and the receipt label contains its reader and message id.
 
 ## Run against Infrai
 
-Set `INFRAI_API_KEY` and optionally `DEVTOOLS_CHANNEL` and `INFRAI_ACCOUNT_ID`, then run `npm run demo`. That creates the channel, publishes one typing event, and prints the returned decision as JSON. Useful as a quick deliverability smoke test before queuing real traffic.
+Set `INFRAI_API_KEY` and optionally `DEVTOOLS_CHANNEL` and `INFRAI_ACCOUNT_ID`, then run `npm run demo`. The command creates the channel and publishes one typing event, printing the returned decision as JSON.
 
 ## Before you deploy: Devtools Thread Receipts
 
